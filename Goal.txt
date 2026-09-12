@@ -1,0 +1,79 @@
+目前：
+PRD v0.2 ✅
+Source model / parser contract 已定義 ✅
+sample.js 作為 integration fixture ✅
+Milestone 1 — Source Model 已完成 ✅
+Milestone 2 — Section Parser 與 CLI 已完成 ✅
+13/13 tests、Release build、CLI smoke test 已通過 ✅
+
+下一步：
+Read-only Module Explorer — Milestone 3
+↓
+單檔案 → 模組清單 → 點擊查看原始碼
+
+再下一步：
+Editable Modules
+↓
+點擊模組直接修改
+更新 SourceDocument / reparse / save
+
+再下一步：
+Git Module Status
+↓
+Working Tree vs HEAD
+哪一些 logical modules 被修改
+
+再下一步：
+Module Diff
+↓
+左右比較 HEAD / Working Tree
+點模組查看詳細 diff
+
+再下一步：
+Relationship Graph
+↓
+module dependency visualization
+Module ↔ Editor ↔ Git 狀態同步
+
+再下一步：
+V1.1 Hardening（功能性 V1 完成後）
+↓
+大型 JS / malformed headings / duplicate sections / save safety / performance
+
+再下一步：
+Repository Model — V2
+↓
+SourceRepository / 多檔案 / repo explorer
+
+再下一步：
+Repository Indexing
+↓
+files / sections / imports / symbols
+
+再下一步：
+Cross-file Analysis
+↓
+AST / scope / symbol / CALLS / READS / WRITES / IMPORTS
+
+再下一步：
+Repository Git Review
+↓
+從「哪些檔案改了」
+提升成「哪些 logical modules 改了」
+
+再下一步：
+Impact Analysis
+↓
+誰依賴誰 / 修改後可能影響哪些模組
+
+再下一步：
+Automatic Module Inference
+↓
+comment / naming / call graph / shared state / imports
+自動建議 logical modules
+
+長期：
+AI-assisted Code Comprehension
+↓
+Codex 寫得更快
+ModuLens 幫人類更快理解它到底改了什麼
