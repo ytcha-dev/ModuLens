@@ -5,10 +5,12 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/src/">
+    <Project Path="src/ModuLens.App/ModuLens.App.csproj" />
     <Project Path="src/ModuLens.Cli/ModuLens.Cli.csproj" />
     <Project Path="src/ModuLens.Core/ModuLens.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ModuLens.App.Tests/ModuLens.App.Tests.csproj" />
     <Project Path="tests/ModuLens.Core.Tests/ModuLens.Core.Tests.csproj" />
   </Folder>
 </Solution>

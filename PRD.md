@@ -1172,9 +1172,19 @@ Module selection
 Module source view
 ```
 
+Initial desktop shell:
+
+* .NET 10 WPF on Windows,
+* filesystem access and file dialogs remain in `ModuLens.App`,
+* parsing and source ranges remain in `ModuLens.Core`,
+* the source pane displays the selected section's raw `ContentRange`,
+* opening and browsing a file are read-only operations.
+
 Acceptance:
 
-Clicking `Transform` displays only the Transform source region.
+Opening `sample.js` displays 21 modules in source order. Clicking `Transform`
+displays only its content source region, excludes the heading comment, shows
+its content/full line ranges, and does not modify the file.
 
 ---
 

@@ -4,15 +4,11 @@ Source model / parser contract 已定義 ✅
 sample.js 作為 integration fixture ✅
 Milestone 1 — Source Model 已完成 ✅
 Milestone 2 — Section Parser 與 CLI 已完成 ✅
-13/13 tests、Release build、CLI smoke test 已通過 ✅
+Milestone 3 — Read-only Module Explorer 已完成 ✅
+18/18 tests、Release build、CLI／WPF smoke tests 已通過 ✅
 
 下一步：
-Read-only Module Explorer — Milestone 3
-↓
-單檔案 → 模組清單 → 點擊查看原始碼
-
-再下一步：
-Editable Modules
+Editable Modules — Milestone 4
 ↓
 點擊模組直接修改
 更新 SourceDocument / reparse / save
