@@ -1099,6 +1099,18 @@ only in HEAD
 
 This intentionally provides semantic grouping before sophisticated AST comparison exists.
 
+For the V1 detailed view, each matched section's complete `FullRange` is split
+into display lines. A deterministic longest-common-subsequence alignment anchors
+unchanged lines. Within each changed hunk, paired HEAD/working lines are shown as
+`modified`; remaining one-sided lines are `removed` or `added`. Displayed line
+numbers remain absolute, 1-based source line numbers. Line endings are omitted
+from the visual rows but source snapshots are not normalized or modified.
+
+Added and removed sections display an empty placeholder on the absent side. The
+desktop view renders both sides in one aligned row list, giving synchronized
+vertical scrolling. This is intentionally a line diff; token, word, move, and
+AST-aware comparison remain outside Milestone 6.
+
 ---
 
 # 28. Important Edge Case
@@ -1289,6 +1301,11 @@ Side-by-side module diff
 Acceptance:
 
 Selecting a changed module displays HEAD vs working source.
+
+The detailed view includes the complete heading and content, absolute source
+line numbers, added/removed/modified styling, full ranges, abbreviated baseline
+revision, a Current tab for editing, and Previous/Next changed-module
+navigation. Added and removed modules show the missing side as absent.
 
 ---
 

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using ModuLens.Core.Diff;
 using ModuLens.Core.Documents;
 using ModuLens.Core.Editing;
 using ModuLens.Core.Git;
@@ -16,21 +17,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly SectionParser parser;
     private readonly SourceDocumentEditor editor;
     private readonly SectionComparer sectionComparer = new();
+    private readonly SectionDiffer sectionDiffer = new();
     private SourceDocument? document;
     private SourceDocument? headDocument;
     private GitFileBaselineKind? gitBaselineKind;
     private string? headRevision;
     private IReadOnlyList<SourceSection> sections = Array.Empty<SourceSection>();
     private IReadOnlyList<ModuleListItemViewModel> modules = Array.Empty<ModuleListItemViewModel>();
+    private IReadOnlyList<ModuleDiffLineViewModel> selectedDiffLines = Array.Empty<ModuleDiffLineViewModel>();
     private ModuleListItemViewModel? selectedModule;
     private string selectedSource = string.Empty;
     private string savedText = string.Empty;
     private string filePath = "No file selected";
     private string statusMessage = "Open a JavaScript file to explore its logical modules.";
     private string gitStatusMessage = "Git status has not been checked.";
+    private string diffSummary = "Git comparison is not available.";
+    private string headDiffRangeSummary = "HEAD: unavailable";
+    private string workingDiffRangeSummary = "Working Tree: unavailable";
     private bool hasUnsavedChanges;
     private bool hasUnmappedGitChanges;
+    private bool canShowDiff;
     private bool isChangingSelection;
+    private int selectedDetailTabIndex;
 
     /// <summary>Initializes the view model with production Core services.</summary>
     public MainWindowViewModel()
@@ -119,6 +127,86 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     /// <summary>Gets whether a current module is available for editing.</summary>
     public bool HasSelectedSection => SelectedSection is not null;
+
+    /// <summary>Gets aligned side-by-side rows for the selected module.</summary>
+    public IReadOnlyList<ModuleDiffLineViewModel> SelectedDiffLines
+    {
+        get => selectedDiffLines;
+        private set => SetField(ref selectedDiffLines, value);
+    }
+
+    /// <summary>Gets whether the selected module has an available Git baseline.</summary>
+    public bool CanShowDiff
+    {
+        get => canShowDiff;
+        private set => SetField(ref canShowDiff, value);
+    }
+
+    /// <summary>Gets the selected module's line-change counts and baseline.</summary>
+    public string DiffSummary
+    {
+        get => diffSummary;
+        private set => SetField(ref diffSummary, value);
+    }
+
+    /// <summary>Gets the selected module's complete HEAD source range.</summary>
+    public string HeadDiffRangeSummary
+    {
+        get => headDiffRangeSummary;
+        private set => SetField(ref headDiffRangeSummary, value);
+    }
+
+    /// <summary>Gets the selected module's complete working-tree source range.</summary>
+    public string WorkingDiffRangeSummary
+    {
+        get => workingDiffRangeSummary;
+        private set => SetField(ref workingDiffRangeSummary, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the Current (0) or Diff (1) detail tab. Opening Diff first
+    /// applies the active editor buffer to the in-memory document snapshot.
+    /// </summary>
+    public int SelectedDetailTabIndex
+    {
+        get => selectedDetailTabIndex;
+        set
+        {
+            if (value == 1 && !isChangingSelection)
+            {
+                CommitPendingEditorSafely();
+                RefreshSelectedDiff();
+            }
+
+            SetField(ref selectedDetailTabIndex, value);
+        }
+    }
+
+    /// <summary>Gets whether an earlier changed module exists.</summary>
+    public bool CanSelectPreviousChangedModule => FindAdjacentChangedModule(-1) is not null;
+
+    /// <summary>Gets whether a later changed module exists.</summary>
+    public bool CanSelectNextChangedModule => FindAdjacentChangedModule(1) is not null;
+
+    /// <summary>Selects the nearest earlier changed module.</summary>
+    public void SelectPreviousChangedModule()
+    {
+        var module = FindAdjacentChangedModule(-1);
+        if (module is not null)
+        {
+            SelectedModule = module;
+        }
+    }
+
+    /// <summary>Selects the nearest later changed module.</summary>
+    public void SelectNextChangedModule()
+    {
+        var module = FindAdjacentChangedModule(1);
+        if (module is not null)
+        {
+            SelectedModule = module;
+        }
+    }
 
     /// <summary>Gets whether in-memory source differs from the loaded file.</summary>
     public bool HasUnsavedChanges
@@ -445,6 +533,119 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SelectedSource));
         OnPropertyChanged(nameof(SelectedRangeSummary));
         OnPropertyChanged(nameof(HasSelectedSection));
+        OnPropertyChanged(nameof(CanSelectPreviousChangedModule));
+        OnPropertyChanged(nameof(CanSelectNextChangedModule));
+        RefreshSelectedDiff();
+        SetSelectedDetailTabIndexCore(module?.GitStatus is
+            SectionChangeKind.Modified or
+            SectionChangeKind.Added or
+            SectionChangeKind.Removed
+                ? 1
+                : 0);
+    }
+
+    private void RefreshSelectedDiff()
+    {
+        if (document is null || SelectedModule?.GitStatus is null)
+        {
+            SelectedDiffLines = [];
+            CanShowDiff = false;
+            DiffSummary = "Git comparison is not available.";
+            HeadDiffRangeSummary = "HEAD: unavailable";
+            WorkingDiffRangeSummary = "Working Tree: unavailable";
+            return;
+        }
+
+        var module = SelectedModule;
+        var change = new SectionChange(
+            module.Identity,
+            module.GitStatus.Value,
+            module.HeadSection,
+            module.WorkingSection);
+        var diff = sectionDiffer.Compare(change, headDocument, document);
+        SelectedDiffLines = diff.Lines
+            .Select(line => new ModuleDiffLineViewModel(line))
+            .ToArray();
+        CanShowDiff = true;
+        DiffSummary = BuildDiffSummary(diff);
+        HeadDiffRangeSummary = BuildDiffRangeSummary("HEAD", module.HeadSection);
+        WorkingDiffRangeSummary = BuildDiffRangeSummary("Working Tree", module.WorkingSection);
+    }
+
+    private string BuildDiffSummary(SectionDiff diff)
+    {
+        var revision = headRevision is null
+            ? "HEAD"
+            : headRevision[..Math.Min(7, headRevision.Length)];
+        var counts = new List<string>();
+
+        if (diff.ModifiedLineCount > 0)
+        {
+            counts.Add($"{diff.ModifiedLineCount} modified");
+        }
+
+        if (diff.AddedLineCount > 0)
+        {
+            counts.Add($"{diff.AddedLineCount} added");
+        }
+
+        if (diff.RemovedLineCount > 0)
+        {
+            counts.Add($"{diff.RemovedLineCount} removed");
+        }
+
+        return counts.Count == 0
+            ? $"{revision} comparison • no line changes"
+            : $"{revision} comparison • {string.Join(" • ", counts)}";
+    }
+
+    private static string BuildDiffRangeSummary(string label, SourceSection? section) =>
+        section is null
+            ? $"{label}: absent"
+            : $"{label}: full lines {section.FullRange.StartLine}–{section.FullRange.EndLine}";
+
+    private void SetSelectedDetailTabIndexCore(int value)
+    {
+        if (selectedDetailTabIndex == value)
+        {
+            return;
+        }
+
+        selectedDetailTabIndex = value;
+        OnPropertyChanged(nameof(SelectedDetailTabIndex));
+    }
+
+    private ModuleListItemViewModel? FindAdjacentChangedModule(int direction)
+    {
+        if (direction is not (-1 or 1) || SelectedModule is null)
+        {
+            return null;
+        }
+
+        var selectedIndex = -1;
+        for (var index = 0; index < Modules.Count; index++)
+        {
+            if (ReferenceEquals(Modules[index], SelectedModule))
+            {
+                selectedIndex = index;
+                break;
+            }
+        }
+
+        for (var index = selectedIndex + direction;
+             index >= 0 && index < Modules.Count;
+             index += direction)
+        {
+            if (Modules[index].GitStatus is
+                SectionChangeKind.Modified or
+                SectionChangeKind.Added or
+                SectionChangeKind.Removed)
+            {
+                return Modules[index];
+            }
+        }
+
+        return null;
     }
 
     private void RefreshDirtyState()

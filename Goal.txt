@@ -7,15 +7,10 @@ Milestone 2 — Section Parser 與 CLI 已完成 ✅
 Milestone 3 — Read-only Module Explorer 已完成 ✅
 Milestone 4 — Editable Modules 已完成 ✅
 Milestone 5 — Git Module Status 已完成 ✅
-43/43 tests、Release build、CLI／WPF／Git smoke tests 已通過 ✅
+Milestone 6 — Module Diff 已完成 ✅
+54/54 tests、Release build、CLI／WPF／Git／Diff smoke tests 已通過 ✅
 
 下一步：
-Module Diff — Milestone 6
-↓
-左右比較 HEAD / Working Tree
-點模組查看詳細 diff
-
-再下一步：
 Relationship Graph
 ↓
 module dependency visualization

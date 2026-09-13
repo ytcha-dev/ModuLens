@@ -21,6 +21,9 @@ public sealed class MainWindowSmokeTests
                 Assert.IsType<MainWindowViewModel>(window.DataContext);
                 var editor = Assert.IsType<TextBox>(window.FindName("ModuleEditor"));
                 var saveButton = Assert.IsType<Button>(window.FindName("SaveButton"));
+                var detailTabs = Assert.IsType<TabControl>(window.FindName("ModuleDetailTabs"));
+                var diffTab = Assert.IsType<TabItem>(window.FindName("DiffTab"));
+                var diffList = Assert.IsType<ListBox>(window.FindName("ModuleDiffList"));
                 Assert.False(editor.IsReadOnly);
                 Assert.Equal(
                     "HasSelectedSection",
@@ -28,6 +31,15 @@ public sealed class MainWindowSmokeTests
                 Assert.Equal(
                     "CanSave",
                     BindingOperations.GetBinding(saveButton, UIElement.IsEnabledProperty)?.Path.Path);
+                Assert.Equal(
+                    "SelectedDetailTabIndex",
+                    BindingOperations.GetBinding(detailTabs, TabControl.SelectedIndexProperty)?.Path.Path);
+                Assert.Equal(
+                    "CanShowDiff",
+                    BindingOperations.GetBinding(diffTab, UIElement.IsEnabledProperty)?.Path.Path);
+                Assert.Equal(
+                    "SelectedDiffLines",
+                    BindingOperations.GetBinding(diffList, ItemsControl.ItemsSourceProperty)?.Path.Path);
                 window.Close();
             }
             catch (Exception exception)

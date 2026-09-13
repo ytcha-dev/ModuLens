@@ -296,6 +296,117 @@ public sealed class MainWindowViewModelTests
             viewModel.GitStatusMessage);
     }
 
+    [Fact]
+    public void SelectingModifiedModule_OpensFullRangeSideBySideDiff()
+    {
+        var head = "// HEAD preamble\n" + Section("Change", "before();\nkeep();\n");
+        var working = "// working preamble\n" + Section("Change", "after();\nkeep();\n");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", working);
+
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available("abcdef123456", head));
+
+        Assert.Equal(1, viewModel.SelectedDetailTabIndex);
+        Assert.True(viewModel.CanShowDiff);
+        Assert.Equal("HEAD: full lines 2–8", viewModel.HeadDiffRangeSummary);
+        Assert.Equal("Working Tree: full lines 2–8", viewModel.WorkingDiffRangeSummary);
+        Assert.Equal("abcdef1 comparison • 1 modified", viewModel.DiffSummary);
+        Assert.Equal("/**", viewModel.SelectedDiffLines[0].HeadText);
+        var modified = Assert.Single(
+            viewModel.SelectedDiffLines,
+            line => line.KindLabel == "modified");
+        Assert.Equal("7", modified.HeadLineNumber);
+        Assert.Equal("before();", modified.HeadText);
+        Assert.Equal("7", modified.WorkingLineNumber);
+        Assert.Equal("after();", modified.WorkingText);
+    }
+
+    [Fact]
+    public void SelectingAddedAndRemovedModulesShowsAbsentSide()
+    {
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument(
+            "fixture.js",
+            Section("Keep", "keep();\n") + Section("Added", "added();\n"));
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available(
+            "abc123",
+            Section("Keep", "keep();\n") + Section("Removed", "removed();\n")));
+
+        viewModel.SelectedModule = Assert.Single(
+            viewModel.Modules,
+            module => module.GitStatus == SectionChangeKind.Added);
+
+        Assert.Equal("HEAD: absent", viewModel.HeadDiffRangeSummary);
+        Assert.All(viewModel.SelectedDiffLines, line =>
+        {
+            Assert.Equal(string.Empty, line.HeadLineNumber);
+            Assert.Equal("added", line.KindLabel);
+        });
+
+        viewModel.SelectedModule = Assert.Single(
+            viewModel.Modules,
+            module => module.GitStatus == SectionChangeKind.Removed);
+
+        Assert.Equal(1, viewModel.SelectedDetailTabIndex);
+        Assert.Equal("Working Tree: absent", viewModel.WorkingDiffRangeSummary);
+        Assert.All(viewModel.SelectedDiffLines, line =>
+        {
+            Assert.Equal(string.Empty, line.WorkingLineNumber);
+            Assert.Equal("removed", line.KindLabel);
+        });
+    }
+
+    [Fact]
+    public void OpeningDiffTab_AppliesPendingEditorBufferAndRefreshesDiff()
+    {
+        var source = Section("Tracked", "before();\n");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", source);
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available("abc123", source));
+        Assert.Equal(0, viewModel.SelectedDetailTabIndex);
+        viewModel.SelectedSource = "after();\n";
+
+        viewModel.SelectedDetailTabIndex = 1;
+
+        Assert.Equal(SectionChangeKind.Modified, viewModel.SelectedModule?.GitStatus);
+        Assert.Equal("abc123 comparison • 1 modified", viewModel.DiffSummary);
+        var modified = Assert.Single(
+            viewModel.SelectedDiffLines,
+            line => line.KindLabel == "modified");
+        Assert.Equal("before();", modified.HeadText);
+        Assert.Equal("after();", modified.WorkingText);
+        Assert.True(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public void ChangedModuleNavigation_SkipsUnchangedModulesWithoutWrapping()
+    {
+        var head = Section("First", "before();\n") +
+            Section("Stable", "stable();\n") +
+            Section("Last", "old();\n");
+        var working = Section("First", "after();\n") +
+            Section("Stable", "stable();\n") +
+            Section("Last", "new();\n");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", working);
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available("abc123", head));
+
+        Assert.Equal("First", viewModel.SelectedModule?.Name);
+        Assert.False(viewModel.CanSelectPreviousChangedModule);
+        Assert.True(viewModel.CanSelectNextChangedModule);
+
+        viewModel.SelectNextChangedModule();
+
+        Assert.Equal("Last", viewModel.SelectedModule?.Name);
+        Assert.True(viewModel.CanSelectPreviousChangedModule);
+        Assert.False(viewModel.CanSelectNextChangedModule);
+        viewModel.SelectNextChangedModule();
+        Assert.Equal("Last", viewModel.SelectedModule?.Name);
+
+        viewModel.SelectPreviousChangedModule();
+        Assert.Equal("First", viewModel.SelectedModule?.Name);
+    }
+
     private static string Lines(params string[] lines) => string.Join('\n', lines);
 
     private static string Section(string name, string content) =>

@@ -99,6 +99,12 @@ public partial class MainWindow : Window
         }
     }
 
+    private void PreviousChangedModule_Click(object sender, RoutedEventArgs e) =>
+        viewModel.SelectPreviousChangedModule();
+
+    private void NextChangedModule_Click(object sender, RoutedEventArgs e) =>
+        viewModel.SelectNextChangedModule();
+
     /// <inheritdoc />
     protected override void OnClosing(CancelEventArgs e)
     {
