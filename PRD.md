@@ -603,6 +603,29 @@ Recalculate affected ranges
 Save complete file
 ```
 
+For Milestone 4, editing and saving use the following contract:
+
+* The editor modifies only the selected `ContentRange`; the structured heading
+  remains outside the editable buffer.
+* A pending editor buffer is transient. Moving to another section or saving
+  replaces the exact range in the complete source text and reparses the whole
+  document into a new immutable `SourceDocument` snapshot.
+* The save adapter writes the complete updated document rather than
+  concatenating independent module copies.
+* Files without a byte-order mark are decoded as strict UTF-8. UTF-8, UTF-16
+  LE/BE, and UTF-32 LE/BE byte-order marks are detected and retained.
+* Before saving, the adapter compares the current file bytes with the bytes
+  loaded by ModuLens. An external change aborts the save without overwriting
+  either version; there is no silent last-writer-wins fallback.
+* A successful save first writes a temporary file in the source directory and
+  then replaces the source path. Failed temporary writes are cleaned up.
+* Opening another file or closing the window with pending changes requires an
+  explicit discard confirmation.
+
+This is the minimum safe single-file workflow. Advanced conflict merging,
+backup/version recovery, additional legacy encodings, and filesystem-specific
+durability guarantees remain outside Milestone 4.
+
 Avoid:
 
 ```text
@@ -1201,6 +1224,10 @@ Range recalculation
 Acceptance:
 
 Editing one module and saving produces a valid complete userscript.
+
+The selected module is reparsed after editing, unrelated source text remains
+character-for-character unchanged, and an external file modification is not
+silently overwritten.
 
 ---
 

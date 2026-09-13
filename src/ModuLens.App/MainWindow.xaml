@@ -26,6 +26,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -35,7 +36,7 @@
                                Text="ModuLens" />
                     <TextBlock Foreground="#9CA3AF"
                                FontSize="11"
-                               Text="Read-only module explorer" />
+                               Text="Editable module explorer" />
                 </StackPanel>
 
                 <TextBlock Grid.Column="1"
@@ -51,6 +52,16 @@
                         VerticalAlignment="Center"
                         Click="OpenFile_Click"
                         Content="Open JavaScript…" />
+
+                <Button x:Name="SaveButton"
+                        Grid.Column="3"
+                        MinWidth="82"
+                        Margin="8,0,0,0"
+                        Padding="14,8"
+                        VerticalAlignment="Center"
+                        Click="SaveFile_Click"
+                        Content="Save"
+                        IsEnabled="{Binding CanSave}" />
             </Grid>
         </Border>
 
@@ -120,7 +131,8 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBox Grid.Row="1"
+                    <TextBox x:Name="ModuleEditor"
+                             Grid.Row="1"
                              Padding="16"
                              AcceptsReturn="True"
                              AcceptsTab="True"
@@ -130,8 +142,8 @@
                              FontSize="13"
                              Foreground="#E5E7EB"
                              HorizontalScrollBarVisibility="Auto"
-                             IsReadOnly="True"
-                             Text="{Binding SelectedSource, Mode=OneWay}"
+                             IsEnabled="{Binding HasSelectedSection}"
+                             Text="{Binding SelectedSource, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              TextWrapping="NoWrap"
                              VerticalScrollBarVisibility="Auto" />
                 </Grid>

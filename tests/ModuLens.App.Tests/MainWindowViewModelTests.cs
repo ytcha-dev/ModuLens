@@ -91,5 +91,86 @@ public sealed class MainWindowViewModelTests
         Assert.Equal(source, File.ReadAllText(samplePath));
     }
 
+    [Fact]
+    public void EditingSelectedModule_PreparesCompleteTextAndRecalculatesRanges()
+    {
+        var source = Lines(
+            "/**",
+            " * ===",
+            " * Config",
+            " * ===",
+            " */",
+            "const enabled = true;",
+            "/**",
+            " * ===",
+            " * Transform",
+            " * ===",
+            " */",
+            "function applyTransform() {};");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", source);
+
+        viewModel.SelectedSource = Lines(
+            "const enabled = false;",
+            "const retries = 3;") + "\n";
+
+        Assert.True(viewModel.HasUnsavedChanges);
+        Assert.True(viewModel.CanSave);
+
+        var completeText = viewModel.PrepareSave();
+
+        Assert.Contains("const enabled = false;\nconst retries = 3;\n", completeText);
+        Assert.EndsWith("function applyTransform() {};", completeText);
+        Assert.Equal("Config", viewModel.SelectedSection?.Name);
+        Assert.Equal("content 6–7  •  full 1–7", viewModel.SelectedRangeSummary);
+        Assert.Equal(8, viewModel.Sections[1].FullRange.StartLine);
+
+        viewModel.MarkSaved();
+
+        Assert.False(viewModel.HasUnsavedChanges);
+        Assert.False(viewModel.CanSave);
+        Assert.Equal("Saved. 2 modules detected.", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void SelectingAnotherModule_CommitsPendingEditToTheDocumentSnapshot()
+    {
+        var source = Lines(
+            "/**",
+            " * ===",
+            " * First",
+            " * ===",
+            " */",
+            "first();",
+            "/**",
+            " * ===",
+            " * Second",
+            " * ===",
+            " */",
+            "second();");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", source);
+        var secondBeforeEdit = viewModel.Sections[1];
+        viewModel.SelectedSource = "first();\nfirstAgain();\n";
+
+        viewModel.SelectedSection = secondBeforeEdit;
+
+        Assert.Equal("Second", viewModel.SelectedSection?.Name);
+        Assert.Equal("second();", viewModel.SelectedSource);
+        Assert.Equal(8, viewModel.SelectedSection?.FullRange.StartLine);
+        Assert.Contains("firstAgain();", viewModel.PrepareSave());
+        Assert.True(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public void PrepareSave_WithoutLoadedDocumentFailsExplicitly()
+    {
+        var viewModel = new MainWindowViewModel();
+
+        var exception = Assert.Throws<InvalidOperationException>(viewModel.PrepareSave);
+
+        Assert.Equal("No source document is loaded.", exception.Message);
+    }
+
     private static string Lines(params string[] lines) => string.Join('\n', lines);
 }

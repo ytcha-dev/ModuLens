@@ -1,4 +1,7 @@
 using System.Runtime.ExceptionServices;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 using ModuLens.App.ViewModels;
 
 namespace ModuLens.App.Tests;
@@ -16,6 +19,15 @@ public sealed class MainWindowSmokeTests
             {
                 var window = new MainWindow();
                 Assert.IsType<MainWindowViewModel>(window.DataContext);
+                var editor = Assert.IsType<TextBox>(window.FindName("ModuleEditor"));
+                var saveButton = Assert.IsType<Button>(window.FindName("SaveButton"));
+                Assert.False(editor.IsReadOnly);
+                Assert.Equal(
+                    "HasSelectedSection",
+                    BindingOperations.GetBinding(editor, UIElement.IsEnabledProperty)?.Path.Path);
+                Assert.Equal(
+                    "CanSave",
+                    BindingOperations.GetBinding(saveButton, UIElement.IsEnabledProperty)?.Path.Path);
                 window.Close();
             }
             catch (Exception exception)
