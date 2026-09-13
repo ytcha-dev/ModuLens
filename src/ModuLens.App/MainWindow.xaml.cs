@@ -105,6 +105,29 @@ public partial class MainWindow : Window
     private void NextChangedModule_Click(object sender, RoutedEventArgs e) =>
         viewModel.SelectNextChangedModule();
 
+    private void PreviousDiffChange_Click(object sender, RoutedEventArgs e)
+    {
+        viewModel.SelectPreviousChange();
+        ScrollSelectedDiffLineIntoView();
+    }
+
+    private void NextDiffChange_Click(object sender, RoutedEventArgs e)
+    {
+        viewModel.SelectNextChange();
+        ScrollSelectedDiffLineIntoView();
+    }
+
+    private void ModuleDiffList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) =>
+        ScrollSelectedDiffLineIntoView();
+
+    private void ScrollSelectedDiffLineIntoView()
+    {
+        if (viewModel.SelectedDiffLine is not null)
+        {
+            ModuleDiffList.ScrollIntoView(viewModel.SelectedDiffLine);
+        }
+    }
+
     /// <inheritdoc />
     protected override void OnClosing(CancelEventArgs e)
     {

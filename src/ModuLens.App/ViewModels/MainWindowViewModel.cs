@@ -26,12 +26,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private IReadOnlyList<ModuleListItemViewModel> modules = Array.Empty<ModuleListItemViewModel>();
     private IReadOnlyList<ModuleDiffLineViewModel> selectedDiffLines = Array.Empty<ModuleDiffLineViewModel>();
     private ModuleListItemViewModel? selectedModule;
+    private ModuleDiffLineViewModel? selectedDiffLine;
     private string selectedSource = string.Empty;
     private string savedText = string.Empty;
     private string filePath = "No file selected";
     private string statusMessage = "Open a JavaScript file to explore its logical modules.";
     private string gitStatusMessage = "Git status has not been checked.";
     private string diffSummary = "Git comparison is not available.";
+    private string diffPositionSummary = "No changes";
     private string headDiffRangeSummary = "HEAD: unavailable";
     private string workingDiffRangeSummary = "Working Tree: unavailable";
     private bool hasUnsavedChanges;
@@ -135,6 +137,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         private set => SetField(ref selectedDiffLines, value);
     }
 
+    /// <summary>Gets or sets the active row used for diff-hunk navigation.</summary>
+    public ModuleDiffLineViewModel? SelectedDiffLine
+    {
+        get => selectedDiffLine;
+        set
+        {
+            if (!SetField(ref selectedDiffLine, value))
+            {
+                return;
+            }
+
+            RefreshDiffNavigationState();
+        }
+    }
+
     /// <summary>Gets whether the selected module has an available Git baseline.</summary>
     public bool CanShowDiff
     {
@@ -147,6 +164,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         get => diffSummary;
         private set => SetField(ref diffSummary, value);
+    }
+
+    /// <summary>Gets the active diff hunk position, such as Change 1 of 3.</summary>
+    public string DiffPositionSummary
+    {
+        get => diffPositionSummary;
+        private set => SetField(ref diffPositionSummary, value);
     }
 
     /// <summary>Gets the selected module's complete HEAD source range.</summary>
@@ -188,6 +212,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     /// <summary>Gets whether a later changed module exists.</summary>
     public bool CanSelectNextChangedModule => FindAdjacentChangedModule(1) is not null;
 
+    /// <summary>Gets whether an earlier changed hunk exists in this module.</summary>
+    public bool CanSelectPreviousChange => FindAdjacentChangeStart(-1) is not null;
+
+    /// <summary>Gets whether a later changed hunk exists in this module.</summary>
+    public bool CanSelectNextChange => FindAdjacentChangeStart(1) is not null;
+
     /// <summary>Selects the nearest earlier changed module.</summary>
     public void SelectPreviousChangedModule()
     {
@@ -205,6 +235,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (module is not null)
         {
             SelectedModule = module;
+        }
+    }
+
+    /// <summary>Selects the previous changed hunk in the current module.</summary>
+    public void SelectPreviousChange()
+    {
+        var line = FindAdjacentChangeStart(-1);
+        if (line is not null)
+        {
+            SelectedDiffLine = line;
+        }
+    }
+
+    /// <summary>Selects the next changed hunk in the current module.</summary>
+    public void SelectNextChange()
+    {
+        var line = FindAdjacentChangeStart(1);
+        if (line is not null)
+        {
+            SelectedDiffLine = line;
         }
     }
 
@@ -549,6 +599,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (document is null || SelectedModule?.GitStatus is null)
         {
             SelectedDiffLines = [];
+            SelectedDiffLine = null;
+            RefreshDiffNavigationState();
             CanShowDiff = false;
             DiffSummary = "Git comparison is not available.";
             HeadDiffRangeSummary = "HEAD: unavailable";
@@ -566,6 +618,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         SelectedDiffLines = diff.Lines
             .Select(line => new ModuleDiffLineViewModel(line))
             .ToArray();
+        var changeStarts = GetChangeStarts();
+        SelectedDiffLine = changeStarts.Count == 0
+            ? null
+            : SelectedDiffLines[changeStarts[0]];
+        RefreshDiffNavigationState();
         CanShowDiff = true;
         DiffSummary = BuildDiffSummary(diff);
         HeadDiffRangeSummary = BuildDiffRangeSummary("HEAD", module.HeadSection);
@@ -646,6 +703,105 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         }
 
         return null;
+    }
+
+    private ModuleDiffLineViewModel? FindAdjacentChangeStart(int direction)
+    {
+        if (direction is not (-1 or 1))
+        {
+            return null;
+        }
+
+        var starts = GetChangeStarts();
+        if (starts.Count == 0)
+        {
+            return null;
+        }
+
+        var selectedIndex = SelectedDiffLine is null
+            ? -1
+            : IndexOfDiffLine(SelectedDiffLine);
+        var selectedHunkIndex = GetSelectedHunkIndex(selectedIndex, starts);
+        if (selectedHunkIndex >= 0)
+        {
+            var targetHunkIndex = selectedHunkIndex + direction;
+            return targetHunkIndex >= 0 && targetHunkIndex < starts.Count
+                ? SelectedDiffLines[starts[targetHunkIndex]]
+                : null;
+        }
+
+        var candidateIndexes = direction > 0
+            ? starts.Where(index => index > selectedIndex)
+            : starts.Where(index => index < selectedIndex).Reverse();
+        var candidate = candidateIndexes.FirstOrDefault(-1);
+        return candidate >= 0 ? SelectedDiffLines[candidate] : null;
+    }
+
+    private IReadOnlyList<int> GetChangeStarts()
+    {
+        var starts = new List<int>();
+
+        for (var index = 0; index < SelectedDiffLines.Count; index++)
+        {
+            if (SelectedDiffLines[index].KindLabel != "unchanged" &&
+                (index == 0 || SelectedDiffLines[index - 1].KindLabel == "unchanged"))
+            {
+                starts.Add(index);
+            }
+        }
+
+        return starts;
+    }
+
+    private int IndexOfDiffLine(ModuleDiffLineViewModel line)
+    {
+        for (var index = 0; index < SelectedDiffLines.Count; index++)
+        {
+            if (ReferenceEquals(SelectedDiffLines[index], line))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private int GetSelectedHunkIndex(int selectedIndex, IReadOnlyList<int> starts)
+    {
+        if (selectedIndex < 0 ||
+            SelectedDiffLines[selectedIndex].KindLabel == "unchanged")
+        {
+            return -1;
+        }
+
+        for (var hunkIndex = 0; hunkIndex < starts.Count; hunkIndex++)
+        {
+            var end = hunkIndex + 1 < starts.Count
+                ? starts[hunkIndex + 1]
+                : SelectedDiffLines.Count;
+            if (selectedIndex >= starts[hunkIndex] && selectedIndex < end)
+            {
+                return hunkIndex;
+            }
+        }
+
+        return -1;
+    }
+
+    private void RefreshDiffNavigationState()
+    {
+        var starts = GetChangeStarts();
+        var selectedIndex = SelectedDiffLine is null
+            ? -1
+            : IndexOfDiffLine(SelectedDiffLine);
+        var selectedHunkIndex = GetSelectedHunkIndex(selectedIndex, starts);
+        DiffPositionSummary = starts.Count == 0
+            ? "No changes"
+            : selectedHunkIndex >= 0
+                ? $"Change {selectedHunkIndex + 1} of {starts.Count}"
+                : $"{starts.Count} changes";
+        OnPropertyChanged(nameof(CanSelectPreviousChange));
+        OnPropertyChanged(nameof(CanSelectNextChange));
     }
 
     private void RefreshDirtyState()

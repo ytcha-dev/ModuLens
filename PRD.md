@@ -792,6 +792,14 @@ Detailed diff
 Next changed module
 ```
 
+The desktop controls distinguish navigation scope explicitly:
+
+* `Prev module` / `Next module` skip unchanged modules and move between changed
+  module identities without wrapping.
+* `Prev change` / `Next change` move between changed hunks inside the selected
+  module. One hunk is one contiguous run of non-unchanged aligned diff rows.
+* The active position is shown as `Change N of M` and scrolled into view.
+
 The primary use case is reviewing AI-generated changes.
 
 ---

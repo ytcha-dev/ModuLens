@@ -24,6 +24,10 @@ public sealed class MainWindowSmokeTests
                 var detailTabs = Assert.IsType<TabControl>(window.FindName("ModuleDetailTabs"));
                 var diffTab = Assert.IsType<TabItem>(window.FindName("DiffTab"));
                 var diffList = Assert.IsType<ListBox>(window.FindName("ModuleDiffList"));
+                var previousChangeButton = Assert.IsType<Button>(
+                    window.FindName("PreviousDiffChangeButton"));
+                var nextChangeButton = Assert.IsType<Button>(
+                    window.FindName("NextDiffChangeButton"));
                 Assert.False(editor.IsReadOnly);
                 Assert.Equal(
                     "HasSelectedSection",
@@ -40,6 +44,11 @@ public sealed class MainWindowSmokeTests
                 Assert.Equal(
                     "SelectedDiffLines",
                     BindingOperations.GetBinding(diffList, ItemsControl.ItemsSourceProperty)?.Path.Path);
+                Assert.Equal(
+                    "SelectedDiffLine",
+                    BindingOperations.GetBinding(diffList, ListBox.SelectedItemProperty)?.Path.Path);
+                Assert.Equal("Prev change", previousChangeButton.Content);
+                Assert.Equal("Next change", nextChangeButton.Content);
                 window.Close();
             }
             catch (Exception exception)

@@ -8,7 +8,7 @@ Milestone 3 — Read-only Module Explorer 已完成 ✅
 Milestone 4 — Editable Modules 已完成 ✅
 Milestone 5 — Git Module Status 已完成 ✅
 Milestone 6 — Module Diff 已完成 ✅
-54/54 tests、Release build、CLI／WPF／Git／Diff smoke tests 已通過 ✅
+56/56 tests、Release build、CLI／WPF／Git／Diff navigation smoke tests 已通過 ✅
 
 下一步：
 Relationship Graph

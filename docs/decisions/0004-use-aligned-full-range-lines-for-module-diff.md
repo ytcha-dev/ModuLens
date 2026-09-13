@@ -29,6 +29,11 @@ therefore inherently synchronized. Changed module selection opens Diff; Current
 remains available for editing. Previous/Next moves through changed modules
 without wrapping.
 
+Navigation labels identify their scope. `Prev module` and `Next module` move
+between changed section identities. `Prev change` and `Next change` move between
+contiguous runs of non-unchanged aligned rows within the active section and
+scroll the selected hunk start into view.
+
 ## Consequences
 
 - Heading description changes are visible because comparison uses `FullRange`.

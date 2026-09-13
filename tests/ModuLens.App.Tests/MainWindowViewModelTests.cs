@@ -407,6 +407,54 @@ public sealed class MainWindowViewModelTests
         Assert.Equal("First", viewModel.SelectedModule?.Name);
     }
 
+    [Fact]
+    public void DiffChangeNavigation_MovesBetweenNonContiguousChangedHunks()
+    {
+        var head = Section(
+            "Tracked",
+            "firstBefore();\nkeep();\nsecondBefore();\n");
+        var working = Section(
+            "Tracked",
+            "firstAfter();\nkeep();\nsecondAfter();\n");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", working);
+
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available("abc123", head));
+
+        Assert.Equal("Change 1 of 2", viewModel.DiffPositionSummary);
+        Assert.Equal("firstAfter();", viewModel.SelectedDiffLine?.WorkingText);
+        Assert.False(viewModel.CanSelectPreviousChange);
+        Assert.True(viewModel.CanSelectNextChange);
+
+        viewModel.SelectNextChange();
+
+        Assert.Equal("Change 2 of 2", viewModel.DiffPositionSummary);
+        Assert.Equal("secondAfter();", viewModel.SelectedDiffLine?.WorkingText);
+        Assert.True(viewModel.CanSelectPreviousChange);
+        Assert.False(viewModel.CanSelectNextChange);
+
+        viewModel.SelectPreviousChange();
+
+        Assert.Equal("Change 1 of 2", viewModel.DiffPositionSummary);
+        Assert.Equal("firstAfter();", viewModel.SelectedDiffLine?.WorkingText);
+    }
+
+    [Fact]
+    public void DiffChangeNavigation_TreatsConsecutiveChangedRowsAsOneHunk()
+    {
+        var head = Section("Tracked", "one();\ntwo();\nkeep();\nold();\n");
+        var working = Section("Tracked", "first();\nsecond();\nkeep();\nnew();\n");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", working);
+
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available("abc123", head));
+
+        Assert.Equal("Change 1 of 2", viewModel.DiffPositionSummary);
+        viewModel.SelectNextChange();
+        Assert.Equal("new();", viewModel.SelectedDiffLine?.WorkingText);
+        Assert.Equal("Change 2 of 2", viewModel.DiffPositionSummary);
+    }
+
     private static string Lines(params string[] lines) => string.Join('\n', lines);
 
     private static string Section(string name, string content) =>

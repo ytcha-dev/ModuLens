@@ -223,23 +223,26 @@
                                                        Foreground="#F3F4F6"
                                                        Text="{Binding DiffSummary}" />
                                             <Button Grid.Column="1"
-                                                    MinWidth="72"
+                                                    MinWidth="92"
                                                     Padding="8,2"
                                                     Click="PreviousChangedModule_Click"
-                                                    Content="Previous"
+                                                    Content="Prev module"
                                                     IsEnabled="{Binding CanSelectPreviousChangedModule}" />
                                             <Button Grid.Column="2"
-                                                    MinWidth="60"
+                                                    MinWidth="92"
                                                     Margin="6,0,0,0"
                                                     Padding="8,2"
                                                     Click="NextChangedModule_Click"
-                                                    Content="Next"
+                                                    Content="Next module"
                                                     IsEnabled="{Binding CanSelectNextChangedModule}" />
                                         </Grid>
                                         <Grid Margin="0,4,0,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock FontSize="11"
                                                        Foreground="#9CA3AF"
@@ -248,6 +251,27 @@
                                                        FontSize="11"
                                                        Foreground="#9CA3AF"
                                                        Text="{Binding WorkingDiffRangeSummary}" />
+                                            <TextBlock Grid.Column="2"
+                                                       Margin="12,0,8,0"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="11"
+                                                       Foreground="#D1D5DB"
+                                                       Text="{Binding DiffPositionSummary}" />
+                                            <Button x:Name="PreviousDiffChangeButton"
+                                                    Grid.Column="3"
+                                                    MinWidth="88"
+                                                    Padding="7,1"
+                                                    Click="PreviousDiffChange_Click"
+                                                    Content="Prev change"
+                                                    IsEnabled="{Binding CanSelectPreviousChange}" />
+                                            <Button x:Name="NextDiffChangeButton"
+                                                    Grid.Column="4"
+                                                    MinWidth="88"
+                                                    Margin="5,0,0,0"
+                                                    Padding="7,1"
+                                                    Click="NextDiffChange_Click"
+                                                    Content="Next change"
+                                                    IsEnabled="{Binding CanSelectNextChange}" />
                                         </Grid>
                                     </StackPanel>
                                 </Border>
@@ -289,6 +313,8 @@
                                          FontFamily="Cascadia Mono, Consolas"
                                          FontSize="12"
                                          ItemsSource="{Binding SelectedDiffLines}"
+                                         SelectedItem="{Binding SelectedDiffLine, Mode=TwoWay}"
+                                         SelectionChanged="ModuleDiffList_SelectionChanged"
                                          ScrollViewer.CanContentScroll="False"
                                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                          ScrollViewer.VerticalScrollBarVisibility="Auto">
