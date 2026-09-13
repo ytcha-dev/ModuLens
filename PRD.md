@@ -674,9 +674,14 @@ For Milestone 5, Git status uses the following contract:
   `not compared`.
 * A repository without HEAD, or a working file absent from HEAD, marks every
   current module as `added`.
+* HEAD content is requested through Git's working-tree filters for the same
+  repository-relative path before parsing. Checkout transformations such as
+  `core.autocrlf` and `.gitattributes` EOL rules therefore do not make every
+  module appear modified when Git considers the working file clean.
 * When HEAD contains the file, sections are matched by exact case-sensitive
   name plus 1-based same-name occurrence index. Full raw `FullRange` text is
-  compared with ordinal equality; line locations are not identity.
+  compared with ordinal equality after the HEAD filtering step; line locations
+  are not identity.
 * Current sections remain in current source order. HEAD-only sections are
   appended as `removed` entries and have no editable current source.
 * Changes before the first detected heading are reported in the Git summary as

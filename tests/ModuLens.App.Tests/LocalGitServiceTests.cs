@@ -7,7 +7,7 @@ namespace ModuLens.App.Tests;
 public sealed class LocalGitServiceTests
 {
     [Fact]
-    public async Task GetHeadVersionAsync_ReadsExactBlobWithArgumentVectors()
+    public async Task GetHeadVersionAsync_ReadsWorkingTreeFilteredHeadContentWithArgumentVectors()
     {
         var repositoryRoot = Path.Combine(Path.GetTempPath(), "ModuLens Git Fixture");
         var filePath = Path.Combine(repositoryRoot, "src", "sample file.js");
@@ -35,7 +35,7 @@ public sealed class LocalGitServiceTests
             ["-C", repositoryRoot, "cat-file", "-e", "HEAD:src/sample file.js"],
             runner.Calls[2].Arguments);
         Assert.Equal(
-            ["-C", repositoryRoot, "show", "--no-ext-diff", "--no-textconv", "HEAD:src/sample file.js"],
+            ["-C", repositoryRoot, "cat-file", "--filters", "--path=src/sample file.js", "HEAD:src/sample file.js"],
             runner.Calls[3].Arguments);
         Assert.All(runner.Calls, call => Assert.Equal("git", call.Executable));
     }

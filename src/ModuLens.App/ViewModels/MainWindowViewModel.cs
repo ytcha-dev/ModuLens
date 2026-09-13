@@ -476,6 +476,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var changedCount = Modules.Count(module =>
             module.GitStatus is not SectionChangeKind.Unchanged);
         var moduleWord = changedCount == 1 ? "module" : "modules";
+        var totalModuleWord = Sections.Count == 1 ? "module" : "modules";
         var scope = HasUnsavedChanges ? "Current source" : "Working tree";
         if (gitBaselineKind == GitFileBaselineKind.NotPresentAtHead)
         {
@@ -489,7 +490,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         GitStatusMessage = changedCount == 0
             ? hasUnmappedGitChanges
                 ? $"{scope} vs {revision}: modules unchanged; source outside detected modules changed."
-                : $"{scope} vs {revision}: all {Sections.Count} modules unchanged."
+                : $"{scope} vs {revision}: all {Sections.Count} {totalModuleWord} unchanged."
             : hasUnmappedGitChanges
                 ? $"{scope} vs {revision}: {changedCount} changed {moduleWord}; source outside modules also changed."
                 : $"{scope} vs {revision}: {changedCount} changed {moduleWord}.";

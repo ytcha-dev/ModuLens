@@ -280,6 +280,22 @@ public sealed class MainWindowViewModelTests
         Assert.Contains("after();", viewModel.PrepareSave());
     }
 
+    [Fact]
+    public void ApplyGitBaseline_WithWorkingTreeFilteredHeadAvoidsEolFalsePositive()
+    {
+        var lfSource = Section("Tracked", "tracked();\n");
+        var crlfSource = lfSource.Replace("\n", "\r\n", StringComparison.Ordinal);
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", crlfSource);
+
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available("abc123", crlfSource));
+
+        Assert.Equal(SectionChangeKind.Unchanged, Assert.Single(viewModel.Modules).GitStatus);
+        Assert.Equal(
+            "Working tree vs abc123: all 1 module unchanged.",
+            viewModel.GitStatusMessage);
+    }
+
     private static string Lines(params string[] lines) => string.Join('\n', lines);
 
     private static string Section(string name, string content) =>

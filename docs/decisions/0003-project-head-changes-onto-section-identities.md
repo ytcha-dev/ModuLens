@@ -16,6 +16,10 @@ leak into parser or UI-independent comparison logic.
   `SectionComparer`.
 - A section identity is `(exact name, 1-based same-name occurrence index)`.
 - Ordinal `FullRange` text equality determines unchanged versus modified.
+- The local adapter asks Git to apply working-tree filters to HEAD content for
+  the file path before parsing it. This aligns checkout EOL and encoding
+  transformations with the working file instead of treating `core.autocrlf`
+  differences as module edits.
 - Current-only identities are added; HEAD-only identities are removed. Renames
   therefore appear as one removal and one addition.
 - App uses local Git through `ProcessStartInfo.ArgumentList`, with no shell.

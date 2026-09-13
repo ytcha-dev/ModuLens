@@ -78,15 +78,15 @@ public sealed class LocalGitService : IGitService
             return GitFileBaseline.NotPresentAtHead();
         }
 
-        var showResult = await RunGitAsync(
-            ["-C", repositoryRoot, "show", "--no-ext-diff", "--no-textconv", objectName],
+        var contentResult = await RunGitAsync(
+            ["-C", repositoryRoot, "cat-file", "--filters", $"--path={gitPath}", objectName],
             cancellationToken);
-        if (showResult.ExitCode != 0)
+        if (contentResult.ExitCode != 0)
         {
-            throw CreateCommandException("Unable to read the file from HEAD", showResult);
+            throw CreateCommandException("Unable to read the filtered file from HEAD", contentResult);
         }
 
-        var headText = SourceTextCodec.Decode(showResult.StandardOutput).Text;
+        var headText = SourceTextCodec.Decode(contentResult.StandardOutput).Text;
         return GitFileBaseline.Available(revision, headText);
     }
 
