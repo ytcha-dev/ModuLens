@@ -1,4 +1,5 @@
 using ModuLens.App.ViewModels;
+using ModuLens.Core.Git;
 
 namespace ModuLens.App.Tests;
 
@@ -172,5 +173,115 @@ public sealed class MainWindowViewModelTests
         Assert.Equal("No source document is loaded.", exception.Message);
     }
 
+    [Fact]
+    public void ApplyGitBaseline_ProjectsEveryChangeKindIntoModuleExplorer()
+    {
+        var head = Section("Keep", "keep();\n") +
+            Section("Change", "before();\n") +
+            Section("Remove", "remove();\n");
+        var working = Section("Keep", "keep();\n") +
+            Section("Change", "after();\n") +
+            Section("Add", "add();\n");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", working);
+
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available("abcdef123456", head));
+
+        Assert.Collection(
+            viewModel.Modules,
+            module => Assert.Equal(SectionChangeKind.Unchanged, module.GitStatus),
+            module => Assert.Equal(SectionChangeKind.Modified, module.GitStatus),
+            module => Assert.Equal(SectionChangeKind.Added, module.GitStatus),
+            module => Assert.Equal(SectionChangeKind.Removed, module.GitStatus));
+        Assert.Equal("Working tree vs abcdef1: 3 changed modules.", viewModel.GitStatusMessage);
+    }
+
+    [Fact]
+    public void SelectingRemovedModule_DisablesCurrentSourceEditor()
+    {
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", Section("Current", "current();\n"));
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available(
+            "abc123",
+            Section("Current", "current();\n") + Section("Removed", "removed();\n")));
+
+        viewModel.SelectedModule = Assert.Single(
+            viewModel.Modules,
+            module => module.GitStatus == SectionChangeKind.Removed);
+
+        Assert.Null(viewModel.SelectedSection);
+        Assert.False(viewModel.HasSelectedSection);
+        Assert.Equal(string.Empty, viewModel.SelectedSource);
+        Assert.Equal("Removed from working tree", viewModel.SelectedRangeSummary);
+    }
+
+    [Fact]
+    public void ApplyGitBaseline_WhenFileIsAbsentAtHeadMarksCurrentModulesAdded()
+    {
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument(
+            "fixture.js",
+            Section("First", "first();\n") + Section("Second", "second();\n"));
+
+        viewModel.ApplyGitBaseline(GitFileBaseline.NotPresentAtHead());
+
+        Assert.All(
+            viewModel.Modules,
+            module => Assert.Equal(SectionChangeKind.Added, module.GitStatus));
+        Assert.Equal(
+            "Working tree: not present at HEAD; 2 added modules.",
+            viewModel.GitStatusMessage);
+    }
+
+    [Fact]
+    public void PrepareSave_RecomputesGitStatusForEditedSource()
+    {
+        var source = Section("Tracked", "before();\n");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", source);
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available("abc123", source));
+        viewModel.SelectedSource = "after();\n";
+
+        viewModel.PrepareSave();
+
+        Assert.Equal(SectionChangeKind.Modified, Assert.Single(viewModel.Modules).GitStatus);
+        Assert.Equal("Current source vs abc123: 1 changed module.", viewModel.GitStatusMessage);
+    }
+
+    [Fact]
+    public void ApplyGitBaseline_ReportsChangesOutsideDetectedModules()
+    {
+        var section = Section("Stable", "stable();\n");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", "// working preamble\n" + section);
+
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available(
+            "abc123",
+            "// head preamble\n" + section));
+
+        Assert.Equal(SectionChangeKind.Unchanged, Assert.Single(viewModel.Modules).GitStatus);
+        Assert.Equal(
+            "Working tree vs abc123: modules unchanged; source outside detected modules changed.",
+            viewModel.GitStatusMessage);
+    }
+
+    [Fact]
+    public void ApplyGitBaseline_PreservesPendingEditorBuffer()
+    {
+        var source = Section("Tracked", "before();\n");
+        var viewModel = new MainWindowViewModel();
+        viewModel.LoadDocument("fixture.js", source);
+        viewModel.SelectedSource = "after();\n";
+
+        viewModel.ApplyGitBaseline(GitFileBaseline.Available("abc123", source));
+
+        Assert.True(viewModel.HasUnsavedChanges);
+        Assert.Equal(SectionChangeKind.Modified, Assert.Single(viewModel.Modules).GitStatus);
+        Assert.Contains("after();", viewModel.PrepareSave());
+    }
+
     private static string Lines(params string[] lines) => string.Join('\n', lines);
+
+    private static string Section(string name, string content) =>
+        $"/**\n * ===\n * {name}\n * ===\n */\n{content}";
 }

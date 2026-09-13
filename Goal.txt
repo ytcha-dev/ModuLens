@@ -6,16 +6,11 @@ Milestone 1 — Source Model 已完成 ✅
 Milestone 2 — Section Parser 與 CLI 已完成 ✅
 Milestone 3 — Read-only Module Explorer 已完成 ✅
 Milestone 4 — Editable Modules 已完成 ✅
-28/28 tests、Release build、CLI／WPF smoke tests 已通過 ✅
+Milestone 5 — Git Module Status 已完成 ✅
+42/42 tests、Release build、CLI／WPF／Git smoke tests 已通過 ✅
 
 下一步：
-Git Module Status — Milestone 5
-↓
-Working Tree vs HEAD
-哪一些 logical modules 被修改
-
-再下一步：
-Module Diff
+Module Diff — Milestone 6
 ↓
 左右比較 HEAD / Working Tree
 點模組查看詳細 diff

@@ -3,8 +3,10 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using Microsoft.Win32;
+using ModuLens.App.Git;
 using ModuLens.App.Storage;
 using ModuLens.App.ViewModels;
+using ModuLens.Core.Git;
 
 namespace ModuLens.App;
 
@@ -13,6 +15,7 @@ public partial class MainWindow : Window
 {
     private readonly MainWindowViewModel viewModel = new();
     private readonly SourceFileStore sourceFileStore = new();
+    private readonly IGitService gitService = new LocalGitService();
     private SourceFileSnapshot? sourceFileSnapshot;
 
     /// <summary>Initializes the main window.</summary>
@@ -46,6 +49,7 @@ public partial class MainWindow : Window
         {
             sourceFileSnapshot = await sourceFileStore.LoadAsync(dialog.FileName);
             viewModel.LoadDocument(sourceFileSnapshot.FilePath, sourceFileSnapshot.Text);
+            await RefreshGitStatusAsync();
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or DecoderFallbackException)
@@ -71,6 +75,7 @@ public partial class MainWindow : Window
             var updatedText = viewModel.PrepareSave();
             sourceFileSnapshot = await sourceFileStore.SaveAsync(sourceFileSnapshot, updatedText);
             viewModel.MarkSaved();
+            await RefreshGitStatusAsync();
         }
         catch (SourceFileChangedException exception)
         {
@@ -118,5 +123,25 @@ public partial class MainWindow : Window
             "Unsaved changes",
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning) == MessageBoxResult.Yes;
+    }
+
+    private async Task RefreshGitStatusAsync()
+    {
+        if (sourceFileSnapshot is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var baseline = await gitService.GetHeadVersionAsync(sourceFileSnapshot.FilePath);
+            viewModel.ApplyGitBaseline(baseline);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+            DecoderFallbackException or Win32Exception)
+        {
+            viewModel.SetGitUnavailable($"Git status unavailable: {exception.Message}");
+        }
     }
 }

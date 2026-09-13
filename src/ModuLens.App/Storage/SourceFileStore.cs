@@ -1,6 +1,5 @@
 using System.IO;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace ModuLens.App.Storage;
 
@@ -9,8 +8,6 @@ namespace ModuLens.App.Storage;
 /// </summary>
 public sealed class SourceFileStore
 {
-    private static readonly Encoding Utf8WithoutBom = new UTF8Encoding(false, true);
-
     /// <summary>Loads a source file and captures the bytes needed for conflict detection.</summary>
     /// <param name="filePath">The source file to load.</param>
     /// <param name="cancellationToken">A token that may cancel the read.</param>
@@ -23,17 +20,13 @@ public sealed class SourceFileStore
 
         var fullPath = Path.GetFullPath(filePath);
         var bytes = await File.ReadAllBytesAsync(fullPath, cancellationToken);
-        var detected = DetectEncoding(bytes);
-        var text = detected.Encoding.GetString(
-            bytes,
-            detected.PreambleLength,
-            bytes.Length - detected.PreambleLength);
+        var decoded = SourceTextCodec.Decode(bytes);
 
         return new SourceFileSnapshot(
             fullPath,
-            text,
-            detected.Encoding,
-            bytes[..detected.PreambleLength],
+            decoded.Text,
+            decoded.Encoding,
+            decoded.Preamble,
             SHA256.HashData(bytes));
     }
 
@@ -63,10 +56,10 @@ public sealed class SourceFileStore
             throw new SourceFileChangedException(snapshot.FilePath);
         }
 
-        var encodedText = snapshot.Encoding.GetBytes(updatedText);
-        var outputBytes = new byte[snapshot.Preamble.Length + encodedText.Length];
-        snapshot.Preamble.CopyTo(outputBytes, 0);
-        encodedText.CopyTo(outputBytes, snapshot.Preamble.Length);
+        var outputBytes = SourceTextCodec.Encode(
+            updatedText,
+            snapshot.Encoding,
+            snapshot.Preamble);
 
         var directory = Path.GetDirectoryName(snapshot.FilePath)
             ?? throw new IOException("The source file has no parent directory.");
@@ -95,35 +88,4 @@ public sealed class SourceFileStore
             SHA256.HashData(outputBytes));
     }
 
-    private static DetectedEncoding DetectEncoding(ReadOnlySpan<byte> bytes)
-    {
-        if (bytes.StartsWith(new byte[] { 0x00, 0x00, 0xFE, 0xFF }))
-        {
-            return new DetectedEncoding(new UTF32Encoding(true, true, true), 4);
-        }
-
-        if (bytes.StartsWith(new byte[] { 0xFF, 0xFE, 0x00, 0x00 }))
-        {
-            return new DetectedEncoding(new UTF32Encoding(false, true, true), 4);
-        }
-
-        if (bytes.StartsWith(new byte[] { 0xEF, 0xBB, 0xBF }))
-        {
-            return new DetectedEncoding(new UTF8Encoding(true, true), 3);
-        }
-
-        if (bytes.StartsWith(new byte[] { 0xFE, 0xFF }))
-        {
-            return new DetectedEncoding(new UnicodeEncoding(true, true, true), 2);
-        }
-
-        if (bytes.StartsWith(new byte[] { 0xFF, 0xFE }))
-        {
-            return new DetectedEncoding(new UnicodeEncoding(false, true, true), 2);
-        }
-
-        return new DetectedEncoding(Utf8WithoutBom, 0);
-    }
-
-    private sealed record DetectedEncoding(Encoding Encoding, int PreambleLength);
 }

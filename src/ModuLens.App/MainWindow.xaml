@@ -36,7 +36,7 @@
                                Text="ModuLens" />
                     <TextBlock Foreground="#9CA3AF"
                                FontSize="11"
-                               Text="Editable module explorer" />
+                               Text="Module editor · Git status" />
                 </StackPanel>
 
                 <TextBlock Grid.Column="1"
@@ -92,10 +92,53 @@
 
                     <ListBox Grid.Row="1"
                              BorderThickness="0"
-                             ItemsSource="{Binding Sections}"
-                             SelectedItem="{Binding SelectedSection, Mode=TwoWay}"
-                             DisplayMemberPath="Name"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                             ItemsSource="{Binding Modules}"
+                             SelectedItem="{Binding SelectedModule, Mode=TwoWay}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="2,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center"
+                                               Text="{Binding Name}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="1"
+                                               Margin="8,0,2,0"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Text="{Binding GitStatusLabel}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#6B7280" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding GitStatusLabel}"
+                                                                 Value="modified">
+                                                        <Setter Property="Foreground" Value="#B45309" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding GitStatusLabel}"
+                                                                 Value="added">
+                                                        <Setter Property="Foreground" Value="#047857" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding GitStatusLabel}"
+                                                                 Value="removed">
+                                                        <Setter Property="Foreground" Value="#B91C1C" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </Grid>
             </Border>
 
@@ -123,7 +166,7 @@
                             <TextBlock FontSize="16"
                                        FontWeight="SemiBold"
                                        Foreground="#111827"
-                                       Text="{Binding SelectedSection.Name, TargetNullValue=Select a module}" />
+                                       Text="{Binding SelectedModule.Name, TargetNullValue=Select a module}" />
                             <TextBlock Margin="0,3,0,0"
                                        FontSize="11"
                                        Foreground="#6B7280"
@@ -153,9 +196,22 @@
         <Border Grid.Row="2"
                 Padding="14,5"
                 Background="#E5E7EB">
-            <TextBlock FontSize="11"
-                       Foreground="#4B5563"
-                       Text="{Binding StatusMessage}" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock FontSize="11"
+                           Foreground="#4B5563"
+                           Text="{Binding StatusMessage}" />
+                <TextBlock Grid.Column="1"
+                           Margin="20,0,0,0"
+                           HorizontalAlignment="Right"
+                           FontSize="11"
+                           Foreground="#4B5563"
+                           Text="{Binding GitStatusMessage}"
+                           TextTrimming="CharacterEllipsis" />
+            </Grid>
         </Border>
     </Grid>
 </Window>

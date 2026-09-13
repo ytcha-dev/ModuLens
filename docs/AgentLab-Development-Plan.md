@@ -9,9 +9,10 @@
 - Milestone 2 — Section Parser and CLI：完成。
 - Milestone 3 — Read-only Module Explorer：完成。
 - Milestone 4 — Editable Modules：完成。
-- 下一個未開始階段：Milestone 5 — Git Module Status。
+- Milestone 5 — Git Module Status：完成。
+- 下一個未開始階段：Milestone 6 — Module Diff。
 
-已完成不代表已支援編輯、Git、GUI graph、AST 或 repository analysis。任何階段都不因 roadmap 上相鄰而自動開始。
+已完成不代表已支援 per-module detailed diff、GUI graph、AST 或 repository analysis。任何階段都不因 roadmap 上相鄰而自動開始。
 
 ## 2. Architecture Boundaries
 
@@ -19,6 +20,7 @@
 ModuLens.Core
   SourceDocument / SourceSection / SourceRange
   SectionParser
+  SectionComparer / IGitService contract
   不依賴 UI、Git process、filesystem write 或特定 AI provider
 
 ModuLens.Cli
@@ -29,9 +31,10 @@ ModuLens.App
   .NET 10 WPF editable desktop shell
   負責 file dialog、checked filesystem save 與 module selection UI
   透過 ViewModel 將 Core sections 投影成 module list 與 editor
+  透過無 shell 的 local Git adapter 讀取 HEAD file version
 
 Future adapters
-  Git、process、telemetry 與其他外部整合
+  telemetry 與其他外部整合
 ```
 
 Core 的輸入是 caller 提供的 path metadata 與 source text。Section parser 不存取 filesystem，也不修改 source text。
@@ -56,7 +59,7 @@ Core 的輸入是 caller 提供的 path metadata 與 source text。Section parse
 | 2 — Section Parser | Structured JSDoc detection and minimal CLI | Synthetic tests pass; `sample.js` produces 21 sections and representative ranges | Complete |
 | 3 — Module Explorer | Read-only WPF module list, selection, and content source view | `sample.js` shows 21 modules; selecting `Transform` displays only its `ContentRange` | Complete |
 | 4 — Editable Modules | Range editing, reparse, encoding-aware checked save | One module can be edited without changing unrelated text | Complete |
-| 5 — Git Module Status | Working tree vs HEAD projected onto sections | Modified modules are identified deterministically | Planned |
+| 5 — Git Module Status | Working tree vs HEAD projected onto sections | Modified modules are identified deterministically | Complete |
 | 6 — Module Diff | Per-module HEAD/current comparison | A changed module opens a detailed side-by-side diff | Planned |
 | 7 — Relationship Graph | Basic module graph and synchronized selection | Module list, editor, graph, and Git status navigate consistently | Planned |
 

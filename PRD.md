@@ -662,6 +662,29 @@ Initial baseline:
 HEAD
 ```
 
+For Milestone 5, Git status uses the following contract:
+
+* The App invokes the local `git` executable with an explicit argument vector;
+  it does not construct shell command strings. Core depends only on
+  `IGitService` and parsed source snapshots.
+* Status is refreshed after opening a file and after a successful save. A
+  pending editor buffer is committed to the in-memory source before an
+  overlapping Git refresh is applied, so refresh cannot discard edits.
+* A file outside a Git work tree remains editable and its modules are shown as
+  `not compared`.
+* A repository without HEAD, or a working file absent from HEAD, marks every
+  current module as `added`.
+* When HEAD contains the file, sections are matched by exact case-sensitive
+  name plus 1-based same-name occurrence index. Full raw `FullRange` text is
+  compared with ordinal equality; line locations are not identity.
+* Current sections remain in current source order. HEAD-only sections are
+  appended as `removed` entries and have no editable current source.
+* Changes before the first detected heading are reported in the Git summary as
+  source outside detected modules, preventing an all-unchanged module result
+  from hiding an unmapped file change.
+* Git command or decoding failures do not block source editing. The UI removes
+  comparison badges and displays an explicit unavailable message.
+
 Future options may include:
 
 ```text
@@ -1243,6 +1266,10 @@ Changed module detection
 Acceptance:
 
 Modified modules are visibly identifiable.
+
+The module explorer labels `unchanged`, `modified`, `added`, and `removed`
+identities against HEAD. Files without an available Git comparison remain
+usable and display `not compared` rather than a fabricated status.
 
 ---
 
